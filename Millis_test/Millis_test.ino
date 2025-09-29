@@ -12,7 +12,15 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   unsigned long currentMillis = millis();
-  Serial.println(currentMillis);
-  delay(100);
+  if (currentMillis - previousMillis >= interval) {
+    if (ledState == LOW) {ledState = HIGH;}
+    else { ledState = LOW;}
+    Serial.print("Led is set to ");
+    Serial.println(ledState);
+    previousMillis = currentMillis;
+  }
+  
+  digitalWrite(ledPin, ledState);
+  
 
 }
