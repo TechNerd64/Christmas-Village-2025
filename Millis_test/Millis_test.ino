@@ -8,7 +8,8 @@ int brightness = 0;
 int fadeAmount = 5;
 
 // Millis() timing
-unsigned long previousMillis = 0;
+unsigned long previousBoard = 0;
+unsigned long previousLed = 0;
 const long boardInterval = 1000;
 
 void setup() {
@@ -24,25 +25,27 @@ void loop() {
   
   // Onboard LED (Status Light)
   unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= boardInterval) {
+  if (currentMillis - previousBoard >= boardInterval) {
     if (ledState == LOW) {ledState = HIGH;}
     else { ledState = LOW;}
     Serial.print("Led is set to ");
     Serial.println(ledState);
-    previousMillis = currentMillis;
+    previousBoard = currentMillis;
+    digitalWrite(boardLed, ledState);
   }
   //External LED
- if (currentMillis - previousMillis >= 30) {
+ if (currentMillis - previousLed >= 30) {
    brightness = brightness + fadeAmount;
    Serial.print("Led Brightness is ");
    Serial.println(brightness);
    if (brightness <= 0 || brightness >= 255) {fadeAmount = -fadeAmount;}
   analogWrite(led, brightness);
+  previousLed = currentMillis;
  }
  
 
   // Update Components
-  digitalWrite(boardLed, ledState);
+  
   
   
 }
