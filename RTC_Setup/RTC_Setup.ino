@@ -1,3 +1,4 @@
+// Created with Gemini 2.5 flash
 // Sketch to set the current time on the DS1307 RTC
 // Compile and upload this sketch ONCE when your computer's clock is correct.
 
