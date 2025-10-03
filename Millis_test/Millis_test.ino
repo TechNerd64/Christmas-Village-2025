@@ -11,6 +11,7 @@ int fadeAmount = 5;
 unsigned long previousBoard = 0;
 unsigned long previousLed = 0;
 const long boardInterval = 1000;
+const long LedInterval = 30;
 
 void setup() {
   // put your setup code here, to run once:
@@ -34,7 +35,7 @@ void loop() {
     digitalWrite(boardLed, ledState);
   }
   //External LED
- if (currentMillis - previousLed >= 30) {
+ if (currentMillis - previousLed >= LedInterval) {
    brightness = brightness + fadeAmount;
    Serial.print("Led Brightness is ");
    Serial.println(brightness);
