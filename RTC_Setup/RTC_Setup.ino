@@ -10,6 +10,7 @@ RTC_DS1307 rtc;
 
 void setup() {
   Serial.begin(9600);
+  Wire.begin();
   
   // Initialize I2C communication with the RTC
   if (! rtc.begin()) {
