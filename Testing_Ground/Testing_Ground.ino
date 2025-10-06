@@ -1,6 +1,8 @@
 //Needed Libraries
 #include <Wire.h> // Necessary for I2C communication
 #include <RTClib.h> // Library for RTC functions
+#include <LiquidCrystal.h> // Library for 16x2 LCD
+LiquidCrystal lcd(23, 33, 29, 27, 25, 31);
 
 
 // Initiate Components
@@ -27,6 +29,8 @@ void setup() {
   pinMode(led,OUTPUT);
   analogWrite(led, brightness);
   Wire.begin();
+  lcd.begin(16, 2);
+  lcd.print("Clock Starting:");
 
    // Check if the RTC module is connected and working
   if (! rtc.begin()) {
@@ -62,6 +66,9 @@ void loop() {
   //Time in Serial Moniter
   if (currentMillis - previousRTC >= RTCInterval) {
     previousRTC = currentMillis;
+    // LCD Output:
+    lcd.clear();
+    // Serial Moniter Output:
     Serial.print(now.year(), DEC);
     Serial.print("/");
     Serial.print(now.month(), DEC);
