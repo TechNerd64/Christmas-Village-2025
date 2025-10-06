@@ -39,6 +39,9 @@ void setup() {
     // This stops the program if the RTC isn't found
     while (1) delay(10); 
   }
+  // OPTIONAL: Uncomment the two lines below to SET the RTC time on upload
+  // Serial.println("Setting time on upload...");
+  // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   
   Serial.begin(9600);
 }
@@ -68,32 +71,36 @@ void loop() {
     previousRTC = currentMillis;
     // LCD Output:
     lcd.clear();
-    // Serial Moniter Output:
-    Serial.print(now.year(), DEC);
-    Serial.print("/");
-    Serial.print(now.month(), DEC);
-    Serial.print("/");
-    Serial.print(now.day(), DEC);
+    lcd.setCursor(0, 0);
+    
+    lcd.print(now.month(), DEC);
+    lcd.print("/");
+    lcd.print(now.day(), DEC);
+    lcd.print("/");
+    lcd.print(now.year(), DEC);
 
-    Serial.print(" - ");
+    lcd.setCursor(0, 1);
+    int hour24 = now.hour();
+    int hour12 = hour24;
+    
+    // Handle 12-hour conversion
+    if (hour24 == 0) {
+      hour12 = 12; // 00:xx is 12 AM
+    } else if (hour24 > 12) {
+      hour12 = hour24 - 12; // 13:xx is 1 PM
+    }
+  lcd.print(hour12);
+  lcd.print(':');
+  
+  if (now.minute() < 10) {lcd.print('0');} // Add leading zero for minutes
+  lcd.print(now.minute(), DEC);
+  lcd.print(':');
+  
+  if (now.second() < 10) {lcd.print('0');} // Add leading zero for seconds
+  lcd.print(now.second(), DEC);
+  
 
-     Serial.print(now.hour(), DEC);
-  Serial.print(':');
-  
-  if (now.minute() < 10) {Serial.print('0');} // Add leading zero for minutes
-  Serial.print(now.minute(), DEC);
-  Serial.print(':');
-  
-  if (now.second() < 10) {Serial.print('0');} // Add leading zero for seconds
-  Serial.print(now.second(), DEC);
-  
-  Serial.println(); // Start a new line
 
   }
  
-
-
-  
-  
-  
 }
