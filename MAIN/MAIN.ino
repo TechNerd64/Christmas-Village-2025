@@ -1,12 +1,12 @@
 // This is the MAIN code for my Christmas Village
-// Please don't make commits unless they are proven and tested in in other projects
+// Plays a MIDI song every time the hour changes, manages lamp flicker, and displays a Christmas countdown.
 
 //Setup Libraries
-#include <Arduino.h>;
-#include <Wire.h>;
-#include <RTClib.h>;
-#include <LiquidCrystal_I2C.h>;
-#include <avr/pgmspace.h>;
+#include <Arduino.h>
+#include <Wire.h>
+#include <RTClib.h>
+#include <LiquidCrystal_I2C.h>
+#include <avr/pgmspace.h>
 
 // === NEW BUZZER DEFINITIONS ===
 #define ARRAY_LEN(array) (sizeof(array) / sizeof(array[0]))
@@ -22,9 +22,10 @@
 const int lamp1 = 2;
 const int lamp2 = 3;
 const int lamp3 = 4;
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// Note: Check your LCD address (0x27 or 0x3F are common)
+LiquidCrystal_I2C lcd(0x27, 16, 2); 
 RTC_DS1307 rtc;
-const int buzzerPin = 32;
+const int buzzerPin = 32; // Assuming you are using a board where pin 32 is available for tone()
 
 //Millis Timing Var.
 unsigned long currentMillis = 0;
@@ -36,13 +37,14 @@ unsigned long previousRTC = 0;
 unsigned long lamp1Timing = 0;
 unsigned long lamp2Timing = 0;
 unsigned long lamp3Timing = 0;
-const long RTCtiming = 60000;
+const long RTCtiming = 60000; // Check RTC status once every minute
 
 //Countdown Timing
-const long targetDate = 1766646000;
+const long targetDate = 1766646000; // Unix time for a future Christmas morning
 
 // New Song Array (Moved to PROGMEM for flash storage)
 const int midi1[24][3] PROGMEM = {
+  // {Frequency, Duration, Rest}
   {D5, 1200, 0},
   {E5, 300, 0},
   {D5, 300, 0},
@@ -68,74 +70,81 @@ const int midi1[24][3] PROGMEM = {
   {B4, 1200, 0},
   {A4, 600, 0},
 };
+
+// --- MODIFIED MIDI TIMING VARIABLES for Hourly Trigger ---
 unsigned long previousSongTime = 0;
-const long songInterval = 10000;
 unsigned long noteStartTime = 0;
 bool isPlaying = false;
 int currentNoteIndex = 0;
+int lastPlayedHour = -1; // New variable to track the last hour the song was played
 
-
+// ------------------------------------------------------------------
+// --- REQUIRED ARDUINO FUNCTIONS ---
+// ------------------------------------------------------------------
 
 void setup() {
-Wire.begin();
-rtc.begin();
-DateTime now = rtc.now();
-long elapsedSec = targetDate - now.unixtime();
-long daysTill = elapsedSec / 86400;
-lcd.clear();
-lcd.setCursor(0,0);
-lcd.print("Only ");
-lcd.print(daysTill + 1); 
-lcd.print(" days");
-lcd.setCursor(0,1);
-lcd.print("until Christmas!");
-
-
-tone(buzzerPin, 440, 2000);
-
-//Start Pins
-pinMode(lamp1, OUTPUT);
-pinMode(lamp2, OUTPUT);
-pinMode(lamp3, OUTPUT);
-pinMode(buzzerPin, OUTPUT);
-
-//Millis Timing Var.
-randomSeed(1000);
-
-//Wire (I2C) stuff
-Wire.begin();
-lcd.init();
-lcd.backlight();
-Serial.begin(9600);
-
-lcd.print("Loading...");
-
- // Check if the RTC module is connected and working
-if (! rtc.begin()) {
-    Serial.println("Error: Couldn't find RTC! Check wiring and power.");
-    Serial.flush();
-    // This stops the program if the RTC isn't found
-while (1) delay(10); 
-}
-
-// OPTIONAL: Uncomment the two lines below to SET the RTC time on upload
- //Serial.println("Setting time on upload...");
- //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
- //Serial.println("Time is set!");
+  Wire.begin();
+  rtc.begin();
   
+  // Start Pins
+  pinMode(lamp1, OUTPUT);
+  pinMode(lamp2, OUTPUT);
+  pinMode(lamp3, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+  
+  // Millis Timing Var.
+  randomSeed(analogRead(0)); // Better random seed
+
+  // I2C setup
+  lcd.init();
+  lcd.backlight();
+  Serial.begin(9600);
+
+  // Check if the RTC module is connected and working
+  if (! rtc.begin()) {
+    Serial.println("Error: Couldn't find RTC! Check wiring and power.");
+    lcd.clear();
+    lcd.print("RTC Error!");
+    Serial.flush();
+    while (1) delay(10); 
+  }
+  
+  // Set initial screen and buzzer test tone
+  DateTime now = rtc.now();
+  long elapsedSec = targetDate - now.unixtime();
+  long daysTill = elapsedSec / 86400;
+  
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Only ");
+  lcd.print(daysTill + 1); 
+  lcd.print(" days");
+  lcd.setCursor(0,1);
+  lcd.print("until Christmas!");
+
+  tone(buzzerPin, 440, 500); // Short tone for startup
+
+  // Initialize the lastPlayedHour to the current hour to prevent playing immediately on startup
+  lastPlayedHour = rtc.now().hour(); 
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-currentMillis = millis();
-LampFlicker();
-Countdown();
-PlayMidiSong(buzzerPin, midi1, ARRAY_LEN(midi1));
+  currentMillis = millis();
+  
+  // These must be called continuously:
+  LampFlicker();
+  PlayMidiSong(buzzerPin, midi1, ARRAY_LEN(midi1)); 
+  
+  // This runs the RTC check/countdown display once per minute (or less often)
+  Countdown(); 
 }
 
-void LampFlicker() {
+// ------------------------------------------------------------------
+// --- CUSTOM FUNCTIONS ---
+// ------------------------------------------------------------------
 
-  //Check to update LED flicker
+void LampFlicker() {
+  // Logic to randomly flicker the village lamps
   if(currentMillis - previousMillis1 >= lamp1Timing){
     previousMillis1 = currentMillis;
     lamp1Timing = random(60);
@@ -154,12 +163,26 @@ void LampFlicker() {
 }
 
 void Countdown() {
- DateTime now = rtc.now();
+  DateTime now = rtc.now();
   long elapsedSec = targetDate - now.unixtime();
   long daysTill = elapsedSec / 86400;
+
+  // Check RTC status (and time for song trigger) once per minute
   if(currentMillis - previousRTC >= RTCtiming) {
     previousRTC = currentMillis;
-   
+
+    // --- HOUR CHANGE CHECK & SONG TRIGGER ---
+    // If the current hour is different from the last played hour AND the song is not already playing
+    if (now.hour() != lastPlayedHour && !isPlaying) {
+      // Start the song!
+      isPlaying = true;
+      lastPlayedHour = now.hour(); // Record the new hour
+      currentNoteIndex = 0; // Reset to the first note
+      noteStartTime = currentMillis; // Start timing for the first note
+      previousSongTime = currentMillis; 
+    }
+    
+    // Update the LCD display
     lcd.clear();
     lcd.setCursor(0,0);
     lcd.print("Only ");
@@ -168,29 +191,20 @@ void Countdown() {
     lcd.setCursor(0,1);
     lcd.print("until Christmas!");
   }
-
 }
 
 void PlayMidiSong(int pin, const int notes[][3], size_t len) {
   unsigned long now = millis();
 
-  // Start song every 30 seconds
-  if (!isPlaying && (now - previousSongTime >= songInterval)) {
-    isPlaying = true;
-    previousSongTime = now;
-    currentNoteIndex = 0;
-    noteStartTime = now;
-  }
-
-  if (!isPlaying) return;
+  if (!isPlaying) return; // Only execute if the song is actively playing
 
   // read note from PROGMEM
-  int note     = pgm_read_word_near(&notes[currentNoteIndex][0]);
-  int duration = pgm_read_word_near(&notes[currentNoteIndex][1]);
-  int rest     = pgm_read_word_near(&notes[currentNoteIndex][2]);
-  long total   = (long)duration + rest;
+  int note      = pgm_read_word_near(&notes[currentNoteIndex][0]);
+  int duration  = pgm_read_word_near(&notes[currentNoteIndex][1]);
+  int rest      = pgm_read_word_near(&notes[currentNoteIndex][2]);
+  long total    = (long)duration + rest; // Total time for this note (sound + silence)
 
-  // If time has passed for this note → move to next
+  // If the total time for the current note has passed, move to the next one
   if (now - noteStartTime >= total) {
     currentNoteIndex++;
     noteStartTime = now;
@@ -202,16 +216,20 @@ void PlayMidiSong(int pin, const int notes[][3], size_t len) {
       return;
     }
 
-    // Load next note
-    note     = pgm_read_word_near(&notes[currentNoteIndex][0]);
-    duration = pgm_read_word_near(&notes[currentNoteIndex][1]);
+    // Load next note (only necessary if we didn't finish)
+    note      = pgm_read_word_near(&notes[currentNoteIndex][0]);
+    duration  = pgm_read_word_near(&notes[currentNoteIndex][1]);
   }
 
-  // Play tone if frequency > 0
+  // Play tone if frequency > 0 (it's a note)
   if (note > 0) {
-    tone(pin, note, duration);
+    // Check if we are still within the note's duration (sound time)
+    if (now - noteStartTime < duration) {
+       tone(pin, note, duration);
+    } else {
+       noTone(pin); // Rest period between notes
+    }
   } else {
-    noTone(pin);
+    noTone(pin); // Zero frequency means a rest
   }
 }
-
