@@ -69,7 +69,7 @@ const int midi1[24][3] PROGMEM = {
   {A4, 600, 0},
 };
 unsigned long previousSongTime = 0;
-const long songInterval = 10000;
+const long songInterval = 3600000;
 unsigned long noteStartTime = 0;
 bool isPlaying = false;
 int currentNoteIndex = 0;
@@ -79,6 +79,8 @@ int currentNoteIndex = 0;
 void setup() {
 Wire.begin();
 rtc.begin();
+lcd.init();
+lcd.backlight();
 DateTime now = rtc.now();
 long elapsedSec = targetDate - now.unixtime();
 long daysTill = elapsedSec / 86400;
@@ -103,12 +105,7 @@ pinMode(buzzerPin, OUTPUT);
 randomSeed(1000);
 
 //Wire (I2C) stuff
-Wire.begin();
-lcd.init();
-lcd.backlight();
 Serial.begin(9600);
-
-lcd.print("Loading...");
 
  // Check if the RTC module is connected and working
 if (! rtc.begin()) {
@@ -119,9 +116,9 @@ while (1) delay(10);
 }
 
 // OPTIONAL: Uncomment the two lines below to SET the RTC time on upload
- //Serial.println("Setting time on upload...");
- //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
- //Serial.println("Time is set!");
+//Serial.println("Setting time on upload...");
+//rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+//Serial.println("Time is set!");
   
 }
 
